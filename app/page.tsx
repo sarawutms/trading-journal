@@ -14,11 +14,6 @@ import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from 'recharts';
 
-// moment ships locale files without separate type declarations, which TS(2882)
-// flags on this kind of side-effect import. The module exists and works fine at
-// runtime — this just tells TypeScript not to worry about it.
-declare module 'moment/locale/th';
-
 const COLORS = {
   bgApp: '#09090D',
   sidebar: '#0D0D13',
