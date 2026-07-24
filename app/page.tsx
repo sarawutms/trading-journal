@@ -303,9 +303,9 @@ function StatTile({ icon, label, value, sub, color = 'default', isDarkMode }: an
 }
 
 export default function Dashboard() {
-  const [capital, setCapital] = useState<number | ''>(1000);
+  const [capital, setCapital] = useState<number | ''>(0);
   const [isEditingCapital, setIsEditingCapital] = useState(false);
-  const [capitalInputVal, setCapitalInputVal] = useState('1000');
+  const [capitalInputVal, setCapitalInputVal] = useState('0');
 
   const [trades, setTrades] = useState<Trade[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -319,9 +319,9 @@ export default function Dashboard() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const [targetProfit, setTargetProfit] = useState<number | ''>(1000);
+  const [targetProfit, setTargetProfit] = useState<number | ''>(0);
   const [isEditingTarget, setIsEditingTarget] = useState(false);
-  const [targetInputVal, setTargetInputVal] = useState('1000');
+  const [targetInputVal, setTargetInputVal] = useState('0');
 
   const [showModal, setShowModal] = useState(false);
   const [calendarDate, setCalendarDate] = useState<Date>(new Date());
