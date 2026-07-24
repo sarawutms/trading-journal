@@ -1677,6 +1677,13 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      <div
+        className="fixed bottom-2 right-3 text-[10px] tracking-wide pointer-events-none select-none z-10"
+        style={{ color: isDarkMode ? '#3A3A48' : '#CBD5E1' }}
+      >
+        © A12M Beta Tester.
+      </div>
     </div>
   );
 }
