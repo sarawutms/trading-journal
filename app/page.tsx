@@ -870,7 +870,7 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
   const filterInputClassName = 'p-2.5 rounded-xl border focus:ring-2 focus:outline-none text-xs';
   const getFieldStyle = (hasError?: boolean): React.CSSProperties =>
     hasError ? { ...inputStyle, borderColor: COLORS.loss, boxShadow: `0 0 0 1px ${COLORS.loss}` } : inputStyle;
-  const FieldError = ({ show }: { show?: boolean }) =>
+  const renderFieldError = (show?: boolean) =>
     show ? <p className="text-xs mt-1" style={{ color: COLORS.loss }}>{t.fieldRequired}</p> : null;
 
   const renderNavItems = (collapsed: boolean) =>
@@ -1698,7 +1698,7 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
                     <div>
                       <label className={`block text-sm font-medium mb-1 ${textMuted}`}>{t.dateLabel}</label>
                       <input type="date" required value={date} onChange={(e) => { setDate(e.target.value); setFormErrors((prev) => ({ ...prev, date: false })); }} className={inputClassName} style={getFieldStyle(formErrors.date)} />
-                      <FieldError show={formErrors.date} />
+                      {renderFieldError()}
                     </div>
                     <div>
                       <label className={`flex items-center gap-1 text-sm font-medium mb-1 ${textMuted}`}><Tag size={14} /> {t.pairLabel}</label>
@@ -1771,7 +1771,7 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
                     <div>
                       <label className={`block text-sm font-medium mb-1 ${textMuted}`}>{t.plLabel}</label>
                       <input type="number" step="any" required placeholder="0" value={amount} onChange={(e) => { setAmount(e.target.value); setFormErrors((prev) => ({ ...prev, amount: false })); }} className={`${inputClassName} font-mono`} style={getFieldStyle(formErrors.amount)} />
-                      <FieldError show={formErrors.amount} />
+                      {renderFieldError()}
                     </div>
                   </div>
                 </>
@@ -1781,12 +1781,12 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
                     <div>
                       <label className={`block text-sm font-medium mb-1 ${textMuted}`}>{t.dateLabel}</label>
                       <input type="date" required value={date} onChange={(e) => { setDate(e.target.value); setFormErrors((prev) => ({ ...prev, date: false })); }} className={inputClassName} style={getFieldStyle(formErrors.date)} />
-                      <FieldError show={formErrors.date} />
+                      {renderFieldError()}
                     </div>
                     <div>
                       <label className={`block text-sm font-medium mb-1 ${textMuted}`}>{t.withdrawalLabel}</label>
                       <input type="number" step="any" required placeholder="0" value={withdrawal} onChange={(e) => { setWithdrawal(e.target.value); setFormErrors((prev) => ({ ...prev, withdrawal: false })); }} className={`${inputClassName} font-mono text-amber-400 font-bold`} style={getFieldStyle(formErrors.withdrawal)} />
-                      <FieldError show={formErrors.withdrawal} />
+                      {renderFieldError()}
                     </div>
                   </div>
                   <div>
