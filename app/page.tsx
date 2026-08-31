@@ -472,7 +472,7 @@ export default function Dashboard() {
 
   const dayDetailsEvents = useMemo(() => {
     if (!dayDetailsDate) return [];
-    return trades.filter((tr) => moment(tr.start).isSame(dayDetailsDate, 'day')).sort((a, b) => a.id - b.id);
+    return trades.filter((tr) => moment(tr.start).isSame(dayDetailsDate, 'day')).sort((a, b) => a.start.getTime() - b.start.getTime());
   }, [trades, dayDetailsDate]);
 
   const periodTrades = useMemo(() => {
@@ -739,7 +739,7 @@ export default function Dashboard() {
   };
 
   const mergeTrades = (current: Trade[], incoming: Trade[]) => {
-    const map = new Map<number, Trade>();
+    const map = new Map<string | number, Trade>();
     current.forEach((tr) => map.set(tr.id, tr));
     let added = 0;
     let updated = 0;
@@ -818,12 +818,12 @@ export default function Dashboard() {
     );
     const matchesDate = !filterDate || moment(tr.start).format('YYYY-MM-DD') === filterDate;
     const matchesPair = !filterPair || tr.pair === filterPair;
-    const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType === '' : tr.tradeType === filterType);
+const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType === '' : tr.tradeType === filterType);
     return matchesSearch && matchesDate && matchesPair && matchesType;
   }), [trades, searchQuery, filterDate, filterPair, filterType]);
 
   const sortedTrades = useMemo(
-    () => [...filteredTrades].sort((a, b) => b.start.getTime() - a.start.getTime() || b.id - a.id),
+    () => [...filteredTrades].sort((a, b) => b.start.getTime() - a.start.getTime() || (b.updatedAt || 0) - (a.updatedAt || 0)),
     [filteredTrades]
   );
 
