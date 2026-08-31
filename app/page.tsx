@@ -320,6 +320,35 @@ export default function Dashboard() {
     return () => subscription.unsubscribe();
   }, [supabase.auth]);
 
+    const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+  };
+
+  const [capital, setCapital] = useState<number | ''>(0);
+  const [isEditingCapital, setIsEditingCapital] = useState(false);
+  const [capitalInputVal, setCapitalInputVal] = useState('0');
+
+  const [trades, setTrades] = useState<Trade[]>([]);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [lang, setLang] = useState<Lang>('th');
+  const t = STR[lang];
+
+  const [activePage, setActivePage] = useState<Page>('dashboard');
+  const [period, setPeriod] = useState<Period>('all');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const [targetProfit, setTargetProfit] = useState<number | ''>(0);
+  const [isEditingTarget, setIsEditingTarget] = useState(false);
+
+    const [targetInputVal, setTargetInputVal] = useState('0');
+
+  const [showModal, setShowModal] = useState(false);
+  const [calendarDate, setCalendarDate] = useState<Date>(new Date());
+
   // Cloud Data Sync
   useEffect(() => {
     if (!user) return;
@@ -357,34 +386,6 @@ export default function Dashboard() {
     
     fetchCloudData();
   }, [user, supabase]);
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-  };
-
-  const [capital, setCapital] = useState<number | ''>(0);
-  const [isEditingCapital, setIsEditingCapital] = useState(false);
-  const [capitalInputVal, setCapitalInputVal] = useState('0');
-
-  const [trades, setTrades] = useState<Trade[]>([]);
-  const [isLoaded, setIsLoaded] = useState(false);
-
-  const [isDarkMode, setIsDarkMode] = useState(true);
-  const [lang, setLang] = useState<Lang>('th');
-  const t = STR[lang];
-
-  const [activePage, setActivePage] = useState<Page>('dashboard');
-  const [period, setPeriod] = useState<Period>('all');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  const [targetProfit, setTargetProfit] = useState<number | ''>(0);
-  const [isEditingTarget, setIsEditingTarget] = useState(false);
-  const [targetInputVal, setTargetInputVal] = useState('0');
-
-  const [showModal, setShowModal] = useState(false);
-  const [calendarDate, setCalendarDate] = useState<Date>(new Date());
 
   const [entryMode, setEntryMode] = useState<'TRADE' | 'WITHDRAWAL'>('TRADE');
 
