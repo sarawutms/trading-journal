@@ -1,8 +1,9 @@
 'use client';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import type { FormEvent, ChangeEvent, ReactNode } from 'react';
+import Link from 'next/link';
 import {
-  Wallet, ArrowDownToLine, Plus, Sun, Moon, X,
+  Wallet, ArrowDownToLine, Plus, Sun, Moon, X, User,
   Target, Tag, List, Trash2, BarChart3, StickyNote,
   Search, Edit2, ChevronLeft, ChevronRight, Menu, LayoutDashboard,
   Languages, Award, Skull, Hash, CalendarDays, ShieldAlert, Crosshair,
@@ -13,6 +14,7 @@ import 'moment/locale/th';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from 'recharts';
+import { createClient } from '@/utils/supabase/client';
 
 const COLORS = {
   bgApp: '#09090D',
@@ -141,7 +143,7 @@ type Page = 'dashboard' | 'log';
 type Period = 'all' | 'month' | 'week' | 'today';
 
 type Trade = {
-  id: number;
+  id: string | number;
   amount: number;
   withdrawal: number;
   pair: string;
@@ -303,6 +305,64 @@ function StatTile({ icon, label, value, sub, color = 'default', isDarkMode }: an
 }
 
 export default function Dashboard() {
+  const [user, setUser] = useState<any>(null);
+  const supabase = createClient();
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [supabase.auth]);
+
+  // Cloud Data Sync
+  useEffect(() => {
+    if (!user) return;
+    
+    const fetchCloudData = async () => {
+      // Fetch Settings
+      const { data: settings } = await supabase.from('user_settings').select('*').eq('user_id', user.id).single();
+      if (settings) {
+        setCapital(Number(settings.capital));
+        setCapitalInputVal(settings.capital.toString());
+        setTargetProfit(Number(settings.target_profit));
+        setTargetInputVal(settings.target_profit.toString());
+      }
+
+      // Fetch Trades
+      const { data: cloudTrades } = await supabase.from('trades').select('*').order('start_date', { ascending: true });
+      if (cloudTrades && cloudTrades.length > 0) {
+        const mappedTrades: Trade[] = cloudTrades.map(tr => ({
+          id: tr.id,
+          amount: Number(tr.amount),
+          withdrawal: Number(tr.withdrawal),
+          pair: tr.pair,
+          tradeType: tr.trade_type as any,
+          lot: tr.lot,
+          orders: tr.orders,
+          tpStatus: tr.tp_status as any,
+          slStatus: tr.sl_status as any,
+          notes: tr.notes,
+          start: new Date(tr.start_date),
+          updatedAt: Number(tr.updated_at)
+        }));
+        setTrades(mappedTrades);
+      }
+    };
+    
+    fetchCloudData();
+  }, [user, supabase]);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+  };
+
   const [capital, setCapital] = useState<number | ''>(0);
   const [isEditingCapital, setIsEditingCapital] = useState(false);
   const [capitalInputVal, setCapitalInputVal] = useState('0');
@@ -328,7 +388,7 @@ export default function Dashboard() {
 
   const [entryMode, setEntryMode] = useState<'TRADE' | 'WITHDRAWAL'>('TRADE');
 
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | number | null>(null);
   const [date, setDate] = useState('');
   const [amount, setAmount] = useState('');
   const [withdrawal, setWithdrawal] = useState('');
@@ -388,11 +448,23 @@ export default function Dashboard() {
       localStorage.setItem('trading_lang_v1', lang);
       localStorage.setItem('trading_theme_v1', isDarkMode ? 'dark' : 'light');
       localStorage.setItem('trading_target_profit', targetProfit.toString());
+      
+      // Sync settings to cloud
+      if (user) {
+        supabase.from('user_settings').upsert({
+          user_id: user.id,
+          capital: Number(capital) || 0,
+          target_profit: Number(targetProfit) || 0
+        }).then(({ error }) => {
+          if (error) console.error('Cloud settings save failed:', error);
+        });
+      }
+      
     } catch (e) {
       console.error('Failed to save data', e);
       alert(t.storageSaveFailed);
     }
-  }, [trades, capital, lang, isDarkMode, targetProfit, isLoaded]);
+  }, [trades, capital, lang, isDarkMode, targetProfit, isLoaded, user, supabase]);
 
   useEffect(() => {
     moment.locale(lang === 'th' ? 'th' : 'en');
@@ -486,7 +558,7 @@ export default function Dashboard() {
     setFormErrors({});
   };
 
-  const handleSaveTrade = (e: FormEvent) => {
+  const handleSaveTrade = async (e: FormEvent) => {
     e.preventDefault();
 
     const errors: { date?: boolean; amount?: boolean; withdrawal?: boolean } = {};
@@ -525,7 +597,7 @@ export default function Dashboard() {
     }
 
     const newTrade: Trade = {
-      id: editingId || Date.now(),
+      id: editingId || (user ? crypto.randomUUID() : Date.now()),
       amount: finalAmount, 
       withdrawal: finalWithdrawal,
       pair: finalPair, 
@@ -538,6 +610,30 @@ export default function Dashboard() {
       start: tradeDate,
       updatedAt: Date.now(),
     };
+
+    if (user) {
+      const dbRow = {
+        id: newTrade.id,
+        user_id: user.id,
+        amount: newTrade.amount,
+        withdrawal: newTrade.withdrawal,
+        pair: newTrade.pair,
+        trade_type: newTrade.tradeType,
+        lot: newTrade.lot,
+        orders: newTrade.orders,
+        tp_status: newTrade.tpStatus,
+        sl_status: newTrade.slStatus,
+        notes: newTrade.notes,
+        start_date: newTrade.start.toISOString(),
+        updated_at: newTrade.updatedAt
+      };
+      
+      const { error } = await supabase.from('trades').upsert(dbRow);
+      if (error) {
+        alert('Failed to save to cloud: ' + error.message);
+        return;
+      }
+    }
 
     if (editingId) {
       setTrades((prev) => prev.map((tr) => (tr.id === editingId ? newTrade : tr)));
@@ -574,8 +670,15 @@ export default function Dashboard() {
     setDayDetailsDate(null);
   };
 
-  const handleDeleteTrade = (id: number) => {
+  const handleDeleteTrade = async (id: string | number) => {
     if (confirm(t.confirmDelete)) {
+      if (user) {
+        const { error } = await supabase.from('trades').delete().eq('id', id);
+        if (error) {
+          alert('Failed to delete from cloud: ' + error.message);
+          return;
+        }
+      }
       setTrades((prev) => prev.filter((tr) => tr.id !== id));
     }
   };
@@ -993,6 +1096,29 @@ export default function Dashboard() {
             >
               {isDarkMode ? <Sun size={16} className="text-amber-400" /> : <Moon size={16} />}
             </button>
+
+            {user ? (
+              <div className="flex items-center gap-3 ml-2 pl-3 border-l" style={{ borderColor: themeCardBorder }}>
+                <span className="text-xs font-medium max-w-[120px] truncate" style={{ color: themeText }} title={user.email}>
+                  {user.email}
+                </span>
+                <button
+                  onClick={handleLogout}
+                  className={`p-2 rounded-lg border text-xs font-bold transition hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/50 ${textMuted}`}
+                  style={{ borderColor: themeCardBorder, background: themeCard }}
+                >
+                  Logout
+                </button>
+              </div>
+            ) : (
+              <Link
+                href="/login"
+                className="p-2.5 rounded-xl border flex items-center gap-1.5 text-xs font-bold transition hover:brightness-110"
+                style={{ borderColor: themeCardBorder, background: COLORS.accent, color: COLORS.accentText }}
+              >
+                <User size={15} /> <span className="hidden sm:inline">เข้าสู่ระบบ</span>
+              </Link>
+            )}
           </div>
         </header>
 
