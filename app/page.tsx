@@ -155,6 +155,15 @@ type Trade = {
   notes: string;
   start: Date;
   updatedAt: number;
+  strategy?: string;
+  timeframe?: string;
+  entryPrice?: number;
+  exitPrice?: number;
+  fees?: number;
+  rr?: number;
+  emotion?: string;
+  followedPlan?: boolean | null;
+  imageUrl?: string;
 };
 
 const NAV_ITEMS: { id: Page; icon: any; labelKey: 'nav_dashboard' | 'nav_log' }[] = [
@@ -188,13 +197,14 @@ function tooltipStyle(isDark: boolean) {
 }
 
 function computeStats(list: Trade[]) {
-  let totalPL = 0, totalWithdrawal = 0, grossProfit = 0, grossLoss = 0;
+  let totalPL = 0, totalWithdrawal = 0, totalDeposit = 0, grossProfit = 0, grossLoss = 0;
   let wins = 0, losses = 0, bestTrade = 0, worstTrade = 0;
   const sorted = [...list].sort((a, b) => a.start.getTime() - b.start.getTime());
 
   sorted.forEach((t) => {
     totalPL += t.amount;
-    totalWithdrawal += t.withdrawal;
+    if (t.withdrawal > 0) totalWithdrawal += t.withdrawal;
+    if (t.withdrawal < 0) totalDeposit += Math.abs(t.withdrawal);
     if (t.amount > 0) {
       wins++; grossProfit += t.amount;
       if (t.amount > bestTrade) bestTrade = t.amount;
@@ -210,7 +220,7 @@ function computeStats(list: Trade[]) {
   const avgLoss = losses > 0 ? grossLoss / losses : 0;
 
   return {
-    totalPL, totalWithdrawal, grossProfit, grossLoss, wins, losses, bestTrade, worstTrade,
+    totalPL, totalWithdrawal, totalDeposit, grossProfit, grossLoss, wins, losses, bestTrade, worstTrade,
     totalTrades, winRate, avgWin, avgLoss,
   };
 }
@@ -256,11 +266,11 @@ function WinRateGauge({ value, wins, losses, isDark, t }: { value: number; wins:
   );
 }
 
-function AvgWinLossCombinedBar({ avgWin, avgLoss, capital, isDark }: { avgWin: number; avgLoss: number; capital: number; isDark: boolean }) {
+function AvgWinLossCombinedBar({ avgWin, avgLoss, capital, totalDeposit, isDark }: { avgWin: number; avgLoss: number; capital: number; totalDeposit?: number; isDark: boolean }) {
   const total = avgWin + avgLoss || 1;
   const winPct = (avgWin / total) * 100;
   
-  const safeCap = capital || 1;
+  const safeCap = (capital || 0) > 0 ? capital : ((totalDeposit || 0) > 0 ? totalDeposit! : 1);
   const avgWinPct = (avgWin / safeCap) * 100;
   const avgLossPct = (avgLoss / safeCap) * 100;
 
@@ -377,6 +387,15 @@ export default function Dashboard() {
           tpStatus: tr.tp_status as any,
           slStatus: tr.sl_status as any,
           notes: tr.notes,
+          strategy: tr.strategy,
+          timeframe: tr.timeframe,
+          entryPrice: tr.entry_price ? Number(tr.entry_price) : undefined,
+          exitPrice: tr.exit_price ? Number(tr.exit_price) : undefined,
+          fees: tr.fees ? Number(tr.fees) : undefined,
+          rr: tr.rr ? Number(tr.rr) : undefined,
+          emotion: tr.emotion,
+          followedPlan: tr.followed_plan,
+          imageUrl: tr.image_url,
           start: new Date(tr.start_date),
           updatedAt: Number(tr.updated_at)
         }));
@@ -387,7 +406,8 @@ export default function Dashboard() {
     fetchCloudData();
   }, [user, supabase]);
 
-  const [entryMode, setEntryMode] = useState<'TRADE' | 'WITHDRAWAL'>('TRADE');
+  const [entryMode, setEntryMode] = useState<'TRADE' | 'WITHDRAWAL' | 'DEPOSIT'>('TRADE');
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
   const [editingId, setEditingId] = useState<string | number | null>(null);
   const [date, setDate] = useState('');
@@ -400,6 +420,15 @@ export default function Dashboard() {
   const [tpStatus, setTpStatus] = useState<'HIT' | 'NONE'>('NONE');
   const [slStatus, setSlStatus] = useState<'HIT' | 'NONE'>('NONE');
   const [notes, setNotes] = useState('');
+  const [strategy, setStrategy] = useState('');
+  const [timeframe, setTimeframe] = useState('');
+  const [entryPrice, setEntryPrice] = useState('');
+  const [exitPrice, setExitPrice] = useState('');
+  const [fees, setFees] = useState('');
+  const [rr, setRr] = useState('');
+  const [emotion, setEmotion] = useState('');
+  const [followedPlan, setFollowedPlan] = useState<boolean | null>(null);
+  const [imageUrl, setImageUrl] = useState('');
   const [formErrors, setFormErrors] = useState<{ date?: boolean; amount?: boolean; withdrawal?: boolean }>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDate, setFilterDate] = useState('');
@@ -486,7 +515,7 @@ export default function Dashboard() {
 
   const periodStats = useMemo(() => computeStats(periodTrades), [periodTrades]);
   const allStats = useMemo(() => computeStats(trades), [trades]);
-  const currentBalance = Number(capital || 0) + allStats.totalPL - allStats.totalWithdrawal;
+  const currentBalance = Number(capital || 0) + allStats.totalPL - allStats.totalWithdrawal + allStats.totalDeposit;
 
   const equityCurve = useMemo(() => {
     const sorted = [...trades].sort((a, b) => a.start.getTime() - b.start.getTime());
@@ -500,12 +529,13 @@ export default function Dashboard() {
   }, [trades, capital, lang]);
 
   const dailyStats = useMemo(() => {
-    const map: Record<string, { pl: number; withdrawal: number; tradeCount: number; wins: number; hasNotes: boolean }> = {};
+    const map: Record<string, { pl: number; withdrawal: number; deposit: number; tradeCount: number; wins: number; hasNotes: boolean }> = {};
     trades.forEach((tr) => {
       const key = moment(tr.start).format('YYYY-MM-DD');
-      if (!map[key]) map[key] = { pl: 0, withdrawal: 0, tradeCount: 0, wins: 0, hasNotes: false };
+      if (!map[key]) map[key] = { pl: 0, withdrawal: 0, deposit: 0, tradeCount: 0, wins: 0, hasNotes: false };
       map[key].pl += tr.amount;
-      map[key].withdrawal += tr.withdrawal;
+      if (tr.withdrawal > 0) map[key].withdrawal += tr.withdrawal;
+      if (tr.withdrawal < 0) map[key].deposit += Math.abs(tr.withdrawal);
       if (tr.amount !== 0) {
         map[key].tradeCount += 1;
         if (tr.amount > 0) map[key].wins += 1;
@@ -531,15 +561,16 @@ export default function Dashboard() {
   }, [calendarDate]);
 
   const monthTotal = useMemo(() => {
-    let pl = 0, withdrawal = 0, days = 0;
+    let pl = 0, withdrawal = 0, deposit = 0, days = 0;
     Object.entries(dailyStats).forEach(([key, v]) => {
       if (moment(key).isSame(calendarDate, 'month')) {
         pl += v.pl;
         withdrawal += v.withdrawal;
+        deposit += v.deposit;
         days += 1;
       }
     });
-    return { pl, withdrawal, days };
+    return { pl, withdrawal, deposit, days };
   }, [dailyStats, calendarDate]);
 
   function weekTotal(week: moment.Moment[]) {
@@ -554,9 +585,19 @@ export default function Dashboard() {
   const resetForm = () => {
     setEditingId(null);
     setDate(moment().format('YYYY-MM-DD'));
-    setAmount(''); setWithdrawal(''); setPair('XAUUSD'); setTradeType('BUY'); setLot('0.01'); setOrders('1'); setTpStatus('NONE'); setSlStatus('NONE'); setNotes('');
+    setAmount(''); setWithdrawal(''); setPair('XAUUSD'); setTradeType('BUY'); setLot('0.01'); setOrders('1'); setTpStatus('NONE'); setSlStatus('NONE'); setNotes(''); setStrategy(''); setTimeframe('');
+    setEntryPrice(''); setExitPrice(''); setFees(''); setRr(''); setEmotion(''); setFollowedPlan(null); setImageUrl('');
     setEntryMode('TRADE');
     setFormErrors({});
+  };
+
+  const handleOpenModal = () => {
+    if (!user) {
+      setShowLoginPrompt(true);
+      return;
+    }
+    resetForm();
+    setShowModal(true);
   };
 
   const handleSaveTrade = async (e: FormEvent) => {
@@ -565,7 +606,7 @@ export default function Dashboard() {
     const errors: { date?: boolean; amount?: boolean; withdrawal?: boolean } = {};
     if (!date) errors.date = true;
     if (entryMode === 'TRADE' && amount.trim() === '') errors.amount = true;
-    if (entryMode === 'WITHDRAWAL' && withdrawal.trim() === '') errors.withdrawal = true;
+    if ((entryMode === 'WITHDRAWAL' || entryMode === 'DEPOSIT') && withdrawal.trim() === '') errors.withdrawal = true;
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       return;
@@ -582,16 +623,34 @@ export default function Dashboard() {
     let finalOrders = orders;
     let finalTpStatus: 'HIT' | 'NONE' | '' = tpStatus;
     let finalSlStatus: 'HIT' | 'NONE' | '' = slStatus;
+    let finalStrategy = strategy;
+    let finalTimeframe = timeframe;
+    let finalEntryPrice = entryPrice ? parseFloat(entryPrice) : undefined;
+    let finalExitPrice = exitPrice ? parseFloat(exitPrice) : undefined;
+    let finalFees = fees ? parseFloat(fees) : undefined;
+    let finalRr = rr ? parseFloat(rr) : undefined;
+    let finalEmotion = emotion;
+    let finalFollowedPlan = followedPlan;
+    let finalImageUrl = imageUrl;
 
-    if (entryMode === 'WITHDRAWAL') {
-      finalWithdrawal = parseFloat(withdrawal) || 0;
-      finalAmount = 0; // ในโหมดถอนเงิน บังคับ P&L เป็น 0
+    if (entryMode === 'WITHDRAWAL' || entryMode === 'DEPOSIT') {
+      finalWithdrawal = entryMode === 'DEPOSIT' ? -Math.abs(parseFloat(withdrawal) || 0) : Math.abs(parseFloat(withdrawal) || 0);
+      finalAmount = 0; // บังคับ P&L เป็น 0
       finalPair = '';
       finalTradeType = '';
       finalLot = '';
       finalOrders = '';
       finalTpStatus = '';
       finalSlStatus = '';
+      finalStrategy = '';
+      finalTimeframe = '';
+      finalEntryPrice = undefined;
+      finalExitPrice = undefined;
+      finalFees = undefined;
+      finalRr = undefined;
+      finalEmotion = '';
+      finalFollowedPlan = null;
+      finalImageUrl = '';
     } else {
       finalAmount = parseFloat(amount) || 0;
       finalWithdrawal = 0; // ในโหมดเทรด บังคับยอดถอนเป็น 0
@@ -608,6 +667,15 @@ export default function Dashboard() {
       tpStatus: finalTpStatus, 
       slStatus: finalSlStatus, 
       notes, 
+      strategy: finalStrategy,
+      timeframe: finalTimeframe,
+      entryPrice: finalEntryPrice,
+      exitPrice: finalExitPrice,
+      fees: finalFees,
+      rr: finalRr,
+      emotion: finalEmotion,
+      followedPlan: finalFollowedPlan,
+      imageUrl: finalImageUrl,
       start: tradeDate,
       updatedAt: Date.now(),
     };
@@ -625,6 +693,15 @@ export default function Dashboard() {
         tp_status: newTrade.tpStatus,
         sl_status: newTrade.slStatus,
         notes: newTrade.notes,
+        strategy: newTrade.strategy,
+        timeframe: newTrade.timeframe,
+        entry_price: newTrade.entryPrice,
+        exit_price: newTrade.exitPrice,
+        fees: newTrade.fees,
+        rr: newTrade.rr,
+        emotion: newTrade.emotion,
+        followed_plan: newTrade.followedPlan,
+        image_url: newTrade.imageUrl,
         start_date: newTrade.start.toISOString(),
         updated_at: newTrade.updatedAt
       };
@@ -648,11 +725,15 @@ export default function Dashboard() {
   };
 
   const handleEditTrade = (tr: Trade) => {
+    if (!user) {
+      setShowLoginPrompt(true);
+      return;
+    }
     setEditingId(tr.id);
     setFormErrors({});
     setDate(moment(tr.start).format('YYYY-MM-DD'));
     setAmount(tr.amount.toString());
-    setWithdrawal(tr.withdrawal ? tr.withdrawal.toString() : '');
+    setWithdrawal(tr.withdrawal ? Math.abs(tr.withdrawal).toString() : '');
     setPair(tr.pair);
     setTradeType(tr.tradeType === '' ? 'BUY' : tr.tradeType);
     setLot(tr.lot || '0.01');
@@ -660,9 +741,18 @@ export default function Dashboard() {
     setTpStatus(tr.tpStatus === '' ? 'NONE' : tr.tpStatus);
     setSlStatus(tr.slStatus === '' ? 'NONE' : tr.slStatus);
     setNotes(tr.notes);
+    setStrategy(tr.strategy || '');
+    setTimeframe(tr.timeframe || '');
+    setEntryPrice(tr.entryPrice ? tr.entryPrice.toString() : '');
+    setExitPrice(tr.exitPrice ? tr.exitPrice.toString() : '');
+    setFees(tr.fees ? tr.fees.toString() : '');
+    setRr(tr.rr ? tr.rr.toString() : '');
+    setEmotion(tr.emotion || '');
+    setFollowedPlan(tr.followedPlan === undefined ? null : tr.followedPlan);
+    setImageUrl(tr.imageUrl || '');
     
     if (tr.tradeType === '') {
-      setEntryMode('WITHDRAWAL');
+      setEntryMode(tr.withdrawal < 0 ? 'DEPOSIT' : 'WITHDRAWAL');
     } else {
       setEntryMode('TRADE');
     }
@@ -672,6 +762,10 @@ export default function Dashboard() {
   };
 
   const handleDeleteTrade = async (id: string | number) => {
+    if (!user) {
+      setShowLoginPrompt(true);
+      return;
+    }
     if (confirm(t.confirmDelete)) {
       if (user) {
         const { error } = await supabase.from('trades').delete().eq('id', id);
@@ -946,7 +1040,7 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
 
         <div className="px-3 mb-4">
           <button
-            onClick={() => { resetForm(); setShowModal(true); }}
+            onClick={handleOpenModal}
             className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 font-medium text-sm transition hover:brightness-110"
             style={{ background: COLORS.accent, color: COLORS.accentText }}
           >
@@ -983,7 +1077,7 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
             </div>
             <div className="px-3 mb-4">
               <button
-                onClick={() => { resetForm(); setShowModal(true); setMobileMenuOpen(false); }}
+                onClick={() => { setMobileMenuOpen(false); handleOpenModal(); }}
                 className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 font-medium text-sm"
                 style={{ background: COLORS.accent, color: COLORS.accentText }}
               >
@@ -1022,28 +1116,10 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
 
             <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs" style={{ borderColor: themeCardBorder, background: themeCard }} title={`${t.balance}: ${fmt(currentBalance)}`}>
               <Wallet size={14} style={{ color: COLORS.accent }} />
-              <span className={`hidden sm:inline ${textMuted}`}>{t.capital}</span>
-              <input
-                type="text"
-                value={isEditingCapital ? capitalInputVal : Number(capital || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                onFocus={() => {
-                  setIsEditingCapital(true);
-                  setCapitalInputVal(capital === '' ? '' : capital.toString());
-                }}
-                onChange={(e) => {
-                  setCapitalInputVal(e.target.value);
-                  const raw = e.target.value.replace(/,/g, '');
-                  if (raw === '' || !isNaN(Number(raw))) {
-                    setCapital(raw === '' ? '' : Number(raw));
-                  }
-                }}
-                onBlur={() => {
-                  setIsEditingCapital(false);
-                  if (capital === '') setCapital(0);
-                }}
-                className="w-24 bg-transparent font-mono font-bold text-right focus:outline-none rounded px-1"
-                style={{ color: themeText }}
-              />
+              <span className={`hidden sm:inline ${textMuted}`}>{t.balance}</span>
+              <span className="bg-transparent font-mono font-bold text-right px-1" style={{ color: themeText }}>
+                {fmt(currentBalance)}
+              </span>
             </div>
 
             <button
@@ -1101,7 +1177,7 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
             {user ? (
               <div className="flex items-center gap-3 ml-2 pl-3 border-l" style={{ borderColor: themeCardBorder }}>
                 <span className="text-xs font-medium max-w-[120px] truncate" style={{ color: themeText }} title={user.email}>
-                  {user.email}
+                  {user.user_metadata?.username || user.user_metadata?.full_name || user.user_metadata?.name || user.email}
                 </span>
                 <button
                   onClick={handleLogout}
@@ -1184,7 +1260,7 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
 
                 <div className={cardClassName} style={cardStyle}>
                   <p className={`text-xs font-medium ${textMuted} mb-1`}>{t.avgWinLoss}</p>
-                  <AvgWinLossCombinedBar avgWin={periodStats.avgWin} avgLoss={periodStats.avgLoss} capital={Number(capital || 1)} isDark={isDarkMode} />
+                  <AvgWinLossCombinedBar avgWin={periodStats.avgWin} avgLoss={periodStats.avgLoss} capital={Number(capital || 0)} totalDeposit={allStats.totalDeposit} isDark={isDarkMode} />
                 </div>
               </div>
 
@@ -1260,6 +1336,12 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
                       <span className={textMuted}>{t.summaryStats}: </span>
                       <span className="font-bold" style={{ color: monthTotal.pl >= 0 ? COLORS.gain : COLORS.loss }}>{fmt(monthTotal.pl)}</span>
                       <span className={textMuted}> · {monthTotal.days} {t.days}</span>
+                      {monthTotal.deposit > 0 && (
+                        <>
+                          <span className={textMuted}> · {lang === 'th' ? 'ฝาก:' : 'Dep:'} </span>
+                          <span className="font-bold text-blue-400">{fmt(monthTotal.deposit)}</span>
+                        </>
+                      )}
                       {monthTotal.withdrawal > 0 && (
                         <>
                           <span className={textMuted}> · {t.withdrawalStat}: </span>
@@ -1280,7 +1362,8 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
 
                       {calendarWeeks.map((week, wi) => {
                         const wt = weekTotal(week);
-                        const safeCap = Number(capital) || 1;
+                        const baseCap = Number(capital) || 0;
+                        const safeCap = baseCap > 0 ? baseCap : (allStats.totalDeposit > 0 ? allStats.totalDeposit : 1);
                         const wtPct = (wt.pl / safeCap) * 100;
                         const wtSign = wt.pl > 0 ? '+' : '';
 
@@ -1295,11 +1378,11 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
                                 return <div key={key} className="aspect-square rounded-lg" style={{ background: isDarkMode ? '#0D0D13' : '#F8FAFC' }} />;
                               }
                               
-                              const hasRecords = !!dstat && (dstat.tradeCount > 0 || dstat.withdrawal > 0);
-                              const isOnlyWithdrawal = hasRecords && dstat.pl === 0 && dstat.withdrawal > 0;
+                              const hasRecords = !!dstat && (dstat.tradeCount > 0 || dstat.withdrawal > 0 || dstat.deposit > 0);
+                              const isOnlyFunds = hasRecords && dstat.pl === 0 && (dstat.withdrawal > 0 || dstat.deposit > 0);
                               
-                              const bg = isOnlyWithdrawal 
-                                ? COLORS.withdrawalDeep 
+                              const bg = isOnlyFunds 
+                                ? (dstat.deposit > 0 ? 'rgba(56, 189, 248, 0.15)' : COLORS.withdrawalDeep)
                                 : hasRecords && dstat.tradeCount > 0
                                 ? (dstat!.pl >= 0 ? COLORS.gainDeep : COLORS.lossDeep) 
                                 : themeCardElevated;
@@ -1329,7 +1412,7 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
                                   {hasRecords ? (
                                     <div className="mt-auto flex flex-col w-full">
                                       <p className="text-[11px] font-bold font-mono text-white leading-tight truncate">
-                                        {dstat.pl !== 0 ? fmtCalendarPL(dstat.pl) : <span className="text-amber-400">{fmtWithdrawalCalendar(dstat.withdrawal)}</span>}
+                                        {dstat.pl !== 0 ? fmtCalendarPL(dstat.pl) : (dstat.deposit > 0 ? <span className="text-blue-300">+{fmtWithdrawalCalendar(dstat.deposit)}</span> : <span className="text-amber-400">{fmtWithdrawalCalendar(dstat.withdrawal)}</span>)}
                                       </p>
                                       <div className="flex justify-between items-end w-full mt-0.5">
                                         {dstat.pl !== 0 ? (
@@ -1337,7 +1420,9 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
                                             {dSign}{plPct.toFixed(2)}%
                                           </p>
                                         ) : (
-                                          <span className="text-[9px] font-mono font-bold text-amber-300">Withdraw</span>
+                                          <span className="text-[9px] font-mono font-bold" style={{ color: dstat.deposit > 0 ? '#93C5FD' : '#FCD34D' }}>
+                                            {dstat.deposit > 0 ? 'Deposit' : 'Withdraw'}
+                                          </span>
                                         )}
                                         {dstat.tradeCount > 0 && (
                                           <span className="text-[8px] text-white/50 font-medium shrink-0">{dstat.tradeCount}T</span>
@@ -1479,7 +1564,14 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
                                 <span className={tr.slStatus === 'HIT' ? 'text-rose-400 font-bold' : 'text-slate-500'}>SL</span>
                               </>}
                             </td>
-                            <td className={`py-3 pr-3 max-w-[150px] truncate ${textMuted}`} title={tr.notes}>{tr.notes || '-'}</td>
+                            <td className={`py-3 pr-3 max-w-[150px] truncate ${textMuted}`} title={tr.notes}>
+                              {tr.imageUrl && <a href={tr.imageUrl} target="_blank" rel="noreferrer" className="mr-1 hover:brightness-125">📷</a>}
+                              {tr.emotion && <span className="mr-1.5" title={tr.emotion}>{tr.emotion === 'Confident' ? '😎' : tr.emotion === 'FOMO' ? '😰' : tr.emotion === 'Greed' ? '🤑' : tr.emotion === 'Revenge' ? '😡' : tr.emotion === 'Anxious' ? '😬' : ''}</span>}
+                              {tr.strategy && <span className="font-bold text-slate-300 mr-1.5">[{tr.strategy}]</span>}
+                              {tr.timeframe && <span className="font-bold text-slate-300 mr-1.5">[{tr.timeframe}]</span>}
+                              {tr.rr && <span className="font-mono text-[10px] text-amber-300 mr-1.5 border border-amber-500/30 px-1 rounded bg-amber-500/10">1:{tr.rr}</span>}
+                              {tr.notes || ( (!tr.strategy && !tr.timeframe && !tr.emotion && !tr.imageUrl && !tr.rr) ? '-' : '')}
+                            </td>
                             <td className="py-3 pr-3 text-right font-mono text-amber-400">{tr.withdrawal > 0 ? fmt(tr.withdrawal) : '-'}</td>
                             <td className="py-3 pr-3 text-right font-mono font-bold" style={{ color: tr.amount >= 0 && !isWithdrawal ? COLORS.gain : COLORS.loss }}>
                               {isWithdrawal ? '-' : fmt(tr.amount)}
@@ -1583,6 +1675,10 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
             <button
               onClick={() => {
                 const selectedDateStr = moment(dayDetailsDate).format('YYYY-MM-DD');
+                if (!user) {
+                  setShowLoginPrompt(true);
+                  return;
+                }
                 setDayDetailsDate(null);
                 resetForm();
                 setDate(selectedDateStr);
@@ -1619,6 +1715,21 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
                       {!isWithdrawal && (
                         <>
                           <p className={`text-xs font-mono mt-0.5 ${textMuted}`}>Lot: {event.lot || '0.01'} | Orders: {event.orders || '1'}</p>
+                          {(event.strategy || event.timeframe || event.rr) && (
+                            <p className={`text-[10px] font-mono mt-0.5 ${textMuted}`}>
+                              {event.strategy && <span className="mr-2">Str: <span className="font-bold text-slate-300">{event.strategy}</span></span>}
+                              {event.timeframe && <span className="mr-2">TF: <span className="font-bold text-slate-300">{event.timeframe}</span></span>}
+                              {event.rr && <span>RR: <span className="font-bold text-amber-300">1:{event.rr}</span></span>}
+                            </p>
+                          )}
+                          {(event.emotion || event.imageUrl || event.followedPlan !== null) && (
+                            <p className={`text-xs mt-0.5 flex gap-2 items-center`}>
+                              {event.imageUrl && <a href={event.imageUrl} target="_blank" rel="noreferrer" className="text-sky-400 hover:brightness-125" title="Image">📷</a>}
+                              {event.emotion && <span title={event.emotion}>{event.emotion === 'Confident' ? '😎' : event.emotion === 'FOMO' ? '😰' : event.emotion === 'Greed' ? '🤑' : event.emotion === 'Revenge' ? '😡' : event.emotion === 'Anxious' ? '😬' : ''}</span>}
+                              {event.followedPlan === true && <span className="text-[10px] bg-green-500/20 text-green-400 px-1 rounded border border-green-500/30">Followed Plan</span>}
+                              {event.followedPlan === false && <span className="text-[10px] bg-rose-500/20 text-rose-400 px-1 rounded border border-rose-500/30">Deviated</span>}
+                            </p>
+                          )}
                           <p className="text-xs font-mono mt-1">
                             <span className={event.tpStatus === 'HIT' ? 'text-green-400 font-bold' : 'text-slate-500'}>TP {event.tpStatus === 'HIT' ? '✓' : ''}</span> | <span className={event.slStatus === 'HIT' ? 'text-rose-400 font-bold' : 'text-slate-500'}>SL {event.slStatus === 'HIT' ? '✓' : ''}</span>
                           </p>
@@ -1685,6 +1796,14 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
                 </button>
                 <button
                   type="button"
+                  onClick={() => { setEntryMode('DEPOSIT'); setFormErrors((prev) => ({ ...prev, amount: false })); }}
+                  className={`flex-1 py-2 text-sm font-bold rounded-lg transition ${entryMode === 'DEPOSIT' ? 'shadow' : textMuted}`}
+                  style={entryMode === 'DEPOSIT' ? { background: COLORS.gain, color: '#fff' } : {}}
+                >
+                  {lang === 'th' ? 'ฝากเงิน' : 'Deposit'}
+                </button>
+                <button
+                  type="button"
                   onClick={() => { setEntryMode('WITHDRAWAL'); setFormErrors((prev) => ({ ...prev, amount: false })); }}
                   className={`flex-1 py-2 text-sm font-bold rounded-lg transition ${entryMode === 'WITHDRAWAL' ? 'shadow' : textMuted}`}
                   style={entryMode === 'WITHDRAWAL' ? { background: COLORS.neutral, color: '#fff' } : {}}
@@ -1704,6 +1823,17 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
                     <div>
                       <label className={`flex items-center gap-1 text-sm font-medium mb-1 ${textMuted}`}><Tag size={14} /> {t.pairLabel}</label>
                       <input type="text" placeholder="XAUUSD" value={pair} onChange={(e) => setPair(e.target.value.toUpperCase())} className={inputClassName} style={inputStyle} />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className={`flex items-center gap-1 text-sm font-medium mb-1 ${textMuted}`}><Target size={14} /> {lang === 'th' ? 'กลยุทธ์' : 'Strategy'}</label>
+                      <input type="text" placeholder="SMC, Breakout..." value={strategy} onChange={(e) => setStrategy(e.target.value)} className={inputClassName} style={inputStyle} />
+                    </div>
+                    <div>
+                      <label className={`block text-sm font-medium mb-1 ${textMuted}`}>{lang === 'th' ? 'Timeframe' : 'Timeframe'}</label>
+                      <input type="text" placeholder="M15, H1..." value={timeframe} onChange={(e) => setTimeframe(e.target.value.toUpperCase())} className={inputClassName} style={inputStyle} />
                     </div>
                   </div>
 
@@ -1736,6 +1866,52 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
                       <input type="number" placeholder="1" value={orders} onChange={(e) => setOrders(e.target.value)} className={`${inputClassName} font-mono`} style={inputStyle} />
                     </div>
                   </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className={`block text-sm font-medium mb-1 ${textMuted}`}>{lang === 'th' ? 'ราคาเข้า (Entry)' : 'Entry Price'}</label>
+                      <input type="number" step="any" placeholder="0.00" value={entryPrice} onChange={(e) => setEntryPrice(e.target.value)} className={`${inputClassName} font-mono`} style={inputStyle} />
+                    </div>
+                    <div>
+                      <label className={`block text-sm font-medium mb-1 ${textMuted}`}>{lang === 'th' ? 'ราคาออก (Exit)' : 'Exit Price'}</label>
+                      <input type="number" step="any" placeholder="0.00" value={exitPrice} onChange={(e) => setExitPrice(e.target.value)} className={`${inputClassName} font-mono`} style={inputStyle} />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className={`block text-sm font-medium mb-1 ${textMuted}`}>{lang === 'th' ? 'ค่าธรรมเนียม/Swap' : 'Fees & Swap'}</label>
+                      <input type="number" step="any" placeholder="0.00" value={fees} onChange={(e) => setFees(e.target.value)} className={`${inputClassName} font-mono`} style={inputStyle} />
+                    </div>
+                    <div>
+                      <label className={`block text-sm font-medium mb-1 ${textMuted}`}>{lang === 'th' ? 'RR (Risk:Reward)' : 'R:R'}</label>
+                      <input type="number" step="any" placeholder="2.5" value={rr} onChange={(e) => setRr(e.target.value)} className={`${inputClassName} font-mono`} style={inputStyle} />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className={`block text-sm font-medium mb-1 ${textMuted}`}>{lang === 'th' ? 'อารมณ์/จิตวิทยา' : 'Emotion'}</label>
+                      <select value={emotion} onChange={(e) => setEmotion(e.target.value)} className={inputClassName} style={inputStyle}>
+                        <option value="">{lang === 'th' ? '- เลือกอารมณ์ -' : '- Select -'}</option>
+                        <option value="Confident">😎 {lang === 'th' ? 'มั่นใจตามแผน' : 'Confident'}</option>
+                        <option value="FOMO">😰 {lang === 'th' ? 'กลัวตกรถ (FOMO)' : 'FOMO'}</option>
+                        <option value="Greed">🤑 {lang === 'th' ? 'โลภ (Greed)' : 'Greed'}</option>
+                        <option value="Revenge">😡 {lang === 'th' ? 'เอาคืน (Revenge)' : 'Revenge'}</option>
+                        <option value="Anxious">😬 {lang === 'th' ? 'กังวล/ลังเล' : 'Anxious'}</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className={`block text-sm font-medium mb-1 ${textMuted}`}>{lang === 'th' ? 'ทำตามแผน?' : 'Followed Plan?'}</label>
+                      <div className="flex gap-1 h-[46px]">
+                        <button type="button" onClick={() => setFollowedPlan(true)} className={`flex-1 rounded-xl text-xs font-bold transition border ${followedPlan === true ? 'bg-green-500/20 text-green-400 border-green-500/50' : 'bg-transparent text-slate-400 border-slate-700 hover:bg-slate-800/40'}`}>
+                          {lang === 'th' ? 'ใช่' : 'Yes'}
+                        </button>
+                        <button type="button" onClick={() => setFollowedPlan(false)} className={`flex-1 rounded-xl text-xs font-bold transition border ${followedPlan === false ? 'bg-rose-500/20 text-rose-400 border-rose-500/50' : 'bg-transparent text-slate-400 border-slate-700 hover:bg-slate-800/40'}`}>
+                          {lang === 'th' ? 'ไม่ใช่' : 'No'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -1765,6 +1941,11 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
                     <textarea placeholder={t.notesPlaceholder} value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className={`${inputClassName} resize-none`} style={inputStyle} />
                   </div>
 
+                  <div>
+                    <label className={`block text-sm font-medium mb-1 ${textMuted}`}>{lang === 'th' ? 'ลิงก์รูปภาพ (Image URL)' : 'Image URL'}</label>
+                    <input type="text" placeholder="https://..." value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} className={inputClassName} style={inputStyle} />
+                  </div>
+
                   <hr style={{ borderColor: themeCardBorder }} className="my-4" />
 
                   {/* 🟢 ถอดช่องถอนเงินออกจากโหมดนี้ เหลือแค่ กำไร/ขาดทุน P&L จัดเต็มช่อง */}
@@ -1785,8 +1966,8 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
                       {renderFieldError()}
                     </div>
                     <div>
-                      <label className={`block text-sm font-medium mb-1 ${textMuted}`}>{t.withdrawalLabel}</label>
-                      <input type="number" step="any" required placeholder="0" value={withdrawal} onChange={(e) => { setWithdrawal(e.target.value); setFormErrors((prev) => ({ ...prev, withdrawal: false })); }} className={`${inputClassName} font-mono text-amber-400 font-bold`} style={getFieldStyle(formErrors.withdrawal)} />
+                      <label className={`block text-sm font-medium mb-1 ${textMuted}`}>{entryMode === 'DEPOSIT' ? (lang === 'th' ? 'ยอดเงินที่ฝาก' : 'Deposit Amount') : t.withdrawalLabel}</label>
+                      <input type="number" step="any" required placeholder="0" value={withdrawal} onChange={(e) => { setWithdrawal(e.target.value); setFormErrors((prev) => ({ ...prev, withdrawal: false })); }} className={`${inputClassName} font-mono font-bold`} style={{ ...getFieldStyle(formErrors.withdrawal), color: entryMode === 'DEPOSIT' ? COLORS.gain : COLORS.withdrawalDeep }} />
                       {renderFieldError()}
                     </div>
                   </div>
@@ -1797,10 +1978,40 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
                 </>
               )}
 
-              <button type="submit" className="w-full font-bold py-3 rounded-xl transition hover:brightness-110 mt-6" style={{ background: entryMode === 'TRADE' ? COLORS.accent : COLORS.neutral, color: entryMode === 'TRADE' ? COLORS.accentText : '#fff' }}>
+              <button type="submit" className="w-full font-bold py-3 rounded-xl transition hover:brightness-110 mt-6" style={{ background: entryMode === 'TRADE' ? COLORS.accent : entryMode === 'DEPOSIT' ? COLORS.gain : COLORS.neutral, color: entryMode === 'TRADE' ? COLORS.accentText : '#fff' }}>
                 {editingId ? t.saveEdit : t.save}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showLoginPrompt && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+          <div className="w-full max-w-sm p-6 rounded-2xl shadow-2xl border flex flex-col items-center text-center" style={{ background: themeCard, borderColor: themeCardBorder }}>
+            <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4" style={{ background: 'rgba(244,63,94,0.1)' }}>
+              <User size={32} style={{ color: COLORS.loss }} />
+            </div>
+            <h3 className="text-xl font-bold mb-2">{lang === 'th' ? 'สงวนสิทธิ์สำหรับสมาชิก' : 'Members Only'}</h3>
+            <p className={`text-sm mb-6 ${textMuted}`}>
+              {lang === 'th' ? 'กรุณาเข้าสู่ระบบหรือสมัครสมาชิกก่อนทำการบันทึก แก้ไข หรือลบข้อมูลครับ' : 'Please log in or register before saving, editing, or deleting data.'}
+            </p>
+            <div className="flex w-full gap-3">
+              <button 
+                onClick={() => setShowLoginPrompt(false)}
+                className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition border hover:bg-slate-800/50`}
+                style={{ borderColor: themeCardBorder }}
+              >
+                {lang === 'th' ? 'ยกเลิก' : 'Cancel'}
+              </button>
+              <Link 
+                href="/login"
+                className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition hover:brightness-110 flex items-center justify-center`}
+                style={{ background: COLORS.accent, color: COLORS.accentText }}
+              >
+                {lang === 'th' ? 'เข้าสู่ระบบ' : 'Login'}
+              </Link>
+            </div>
           </div>
         </div>
       )}
