@@ -275,8 +275,8 @@ function AvgWinLossCombinedBar({ avgWin, avgLoss, capital, totalDeposit, isDark,
   const rrRatio = avgLoss > 0 ? (avgWin / avgLoss).toFixed(2) : (avgWin > 0 ? '∞' : '0.00');
 
   return (
-    <div className="flex flex-col justify-center items-center w-full h-full pb-6 pt-1">
-      <div className="flex w-full gap-2 mb-5">
+    <div className="flex flex-col justify-center items-center w-full h-full pb-2">
+      <div className="flex w-full gap-2 mb-3 mt-1">
         <div className="flex-1 flex flex-col items-center py-2 rounded-xl border" style={{ background: isDark ? 'rgba(16, 185, 129, 0.05)' : 'rgba(16, 185, 129, 0.1)', borderColor: isDark ? 'rgba(16, 185, 129, 0.1)' : 'rgba(16, 185, 129, 0.2)' }}>
           <span className="text-xl md:text-2xl font-black font-mono tracking-tighter" style={{ color: COLORS.gain }}>+{avgWinPct.toFixed(2)}%</span>
           <span className="text-[11px] font-mono font-bold opacity-70 mt-0.5" style={{ color: COLORS.gain }}>{fmt(avgWin)}</span>
@@ -287,18 +287,17 @@ function AvgWinLossCombinedBar({ avgWin, avgLoss, capital, totalDeposit, isDark,
         </div>
       </div>
       
-      <div className="w-full relative">
-        <div className="flex justify-between text-[9px] font-bold mb-1 opacity-50 uppercase tracking-wider px-1">
-          <span>{t?.win || 'WIN'}</span>
-          <span>{t?.loss || 'LOSS'}</span>
+      <div className="w-full">
+        <div className="flex justify-between items-center mb-1.5 px-0.5">
+          <span className="text-[9px] font-bold opacity-50 uppercase tracking-wider">{t?.win || 'WIN'}</span>
+          <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded-full border shadow-sm whitespace-nowrap" style={{ background: isDark ? '#0F172A' : '#1E293B', borderColor: isDark ? '#334155' : '#475569', color: '#F8FAFC' }}>
+            RR 1 : {rrRatio}
+          </span>
+          <span className="text-[9px] font-bold opacity-50 uppercase tracking-wider">{t?.loss || 'LOSS'}</span>
         </div>
         <div className="h-3 rounded-full overflow-hidden flex w-full relative" style={{ background: isDark ? '#1E293B' : '#E2E8F0', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.2)' }}>
           <div className="h-full transition-all duration-1000" style={{ width: `${winPct}%`, background: COLORS.gain, filter: `drop-shadow(0 0 6px ${COLORS.gain})` }} />
           <div className="h-full transition-all duration-1000" style={{ width: `${100 - winPct}%`, background: COLORS.loss, filter: `drop-shadow(0 0 6px ${COLORS.loss})` }} />
-        </div>
-        
-        <div className="absolute left-1/2 -bottom-3 -translate-x-1/2 text-white text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full border shadow-lg whitespace-nowrap" style={{ background: isDark ? '#0F172A' : '#1E293B', borderColor: isDark ? '#334155' : '#475569' }}>
-          RR 1 : {rrRatio}
         </div>
       </div>
     </div>
