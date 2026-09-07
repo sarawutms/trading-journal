@@ -262,6 +262,7 @@ function WinRateGauge({ value, wins, losses, isDark, t }: { value: number; wins:
           {losses} {t.loss}
         </span>
       </div>
+    </div>
   );
 }
 
