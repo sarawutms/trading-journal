@@ -276,22 +276,24 @@ function AvgWinLossCombinedBar({ avgWin, avgLoss, capital, totalDeposit, isDark,
   const rrRatio = avgLoss > 0 ? (avgWin / avgLoss).toFixed(2) : (avgWin > 0 ? '∞' : '0.00');
 
   return (
-    <div className="flex flex-col items-center justify-center w-full h-full pb-2">
-      <div className="flex w-full gap-3 relative">
-        <div className="flex-1 flex flex-col items-center justify-center py-5 rounded-xl border" style={{ background: isDark ? 'rgba(16, 185, 129, 0.05)' : 'rgba(16, 185, 129, 0.1)', borderColor: isDark ? 'rgba(16, 185, 129, 0.1)' : 'rgba(16, 185, 129, 0.2)' }}>
-          <span className="text-2xl md:text-3xl font-black font-mono tracking-tighter" style={{ color: COLORS.gain }}>+{avgWinPct.toFixed(2)}%</span>
-          <span className="text-xs font-mono font-bold opacity-70 mt-1" style={{ color: COLORS.gain }}>{fmt(avgWin)}</span>
-        </div>
-        
-        {/* Floating RR Badge */}
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] font-mono font-bold px-2.5 py-1 rounded-md border shadow-xl whitespace-nowrap z-10" style={{ background: isDark ? '#0F172A' : '#1E293B', borderColor: isDark ? '#334155' : '#475569', color: '#F8FAFC' }}>
-          RR 1 : {rrRatio}
+    <div className="flex flex-col items-center w-full h-full">
+      <div className="flex w-full gap-3 mt-1">
+        <div className="flex-1 flex flex-col items-center justify-center py-4 rounded-xl border" style={{ background: isDark ? 'rgba(16, 185, 129, 0.05)' : 'rgba(16, 185, 129, 0.1)', borderColor: isDark ? 'rgba(16, 185, 129, 0.1)' : 'rgba(16, 185, 129, 0.2)' }}>
+          <span className="text-xl md:text-2xl font-black font-mono tracking-tighter" style={{ color: COLORS.gain }}>+{avgWinPct.toFixed(2)}%</span>
+          <span className="text-[10px] md:text-[11px] font-mono font-bold opacity-70 mt-1" style={{ color: COLORS.gain }}>{fmt(avgWin)}</span>
         </div>
 
-        <div className="flex-1 flex flex-col items-center justify-center py-5 rounded-xl border" style={{ background: isDark ? 'rgba(244, 63, 94, 0.05)' : 'rgba(244, 63, 94, 0.1)', borderColor: isDark ? 'rgba(244, 63, 94, 0.1)' : 'rgba(244, 63, 94, 0.2)' }}>
-          <span className="text-2xl md:text-3xl font-black font-mono tracking-tighter" style={{ color: COLORS.loss }}>-{avgLossPct.toFixed(2)}%</span>
-          <span className="text-xs font-mono font-bold opacity-70 mt-1" style={{ color: COLORS.loss }}>-{fmt(avgLoss)}</span>
+        <div className="flex-1 flex flex-col items-center justify-center py-4 rounded-xl border" style={{ background: isDark ? 'rgba(244, 63, 94, 0.05)' : 'rgba(244, 63, 94, 0.1)', borderColor: isDark ? 'rgba(244, 63, 94, 0.1)' : 'rgba(244, 63, 94, 0.2)' }}>
+          <span className="text-xl md:text-2xl font-black font-mono tracking-tighter" style={{ color: COLORS.loss }}>-{avgLossPct.toFixed(2)}%</span>
+          <span className="text-[10px] md:text-[11px] font-mono font-bold opacity-70 mt-1" style={{ color: COLORS.loss }}>-{fmt(avgLoss)}</span>
         </div>
+      </div>
+
+      <div className="flex items-center justify-center mt-auto mb-1">
+        <span className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] md:text-[11px] font-mono font-bold shadow-sm transition-colors hover:brightness-110" style={{ background: isDark ? '#1E293B' : '#F1F5F9', color: isDark ? '#F8FAFC' : '#0F172A', border: `1px solid ${isDark ? '#334155' : '#E2E8F0'}` }}>
+          <span className="opacity-60">RR</span>
+          <span>1 : {rrRatio}</span>
+        </span>
       </div>
     </div>
   );
