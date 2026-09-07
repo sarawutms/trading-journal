@@ -1114,6 +1114,31 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
               </div>
             )}
 
+            <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs" style={{ borderColor: themeCardBorder, background: themeCard }} title={`${t.capital}`}>
+              <span className={`hidden sm:inline ${textMuted}`}>{t.capital}</span>
+              <input
+                type="text"
+                value={isEditingCapital ? capitalInputVal : Number(capital || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                onFocus={() => {
+                  setIsEditingCapital(true);
+                  setCapitalInputVal(capital === '' ? '' : capital.toString());
+                }}
+                onChange={(e) => {
+                  setCapitalInputVal(e.target.value);
+                  const raw = e.target.value.replace(/,/g, '');
+                  if (raw === '' || !isNaN(Number(raw))) {
+                    setCapital(raw === '' ? '' : Number(raw));
+                  }
+                }}
+                onBlur={() => {
+                  setIsEditingCapital(false);
+                  if (capital === '') setCapital(0);
+                }}
+                className="w-16 sm:w-20 bg-transparent font-mono font-bold text-right focus:outline-none rounded"
+                style={{ color: themeText }}
+              />
+            </div>
+
             <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs" style={{ borderColor: themeCardBorder, background: themeCard }} title={`${t.balance}: ${fmt(currentBalance)}`}>
               <Wallet size={14} style={{ color: COLORS.accent }} />
               <span className={`hidden sm:inline ${textMuted}`}>{t.balance}</span>
