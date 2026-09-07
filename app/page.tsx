@@ -1326,7 +1326,7 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
 
                 <div className={`${cardClassName} flex flex-col`} style={cardStyle}>
                   <p className={`text-xs font-medium ${textMuted} mb-1`}>{t.avgWinLoss}</p>
-                  <div className="flex-1 w-full">
+                  <div className="flex-1 flex items-center justify-center w-full">
                     <AvgWinLossCombinedBar avgWin={periodStats.avgWin} avgLoss={periodStats.avgLoss} capital={Number(capital || 0)} totalDeposit={allStats.totalDeposit} isDark={isDarkMode} t={t} />
                   </div>
                 </div>
