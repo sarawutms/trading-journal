@@ -7,7 +7,7 @@ import {
   Target, Tag, List, Trash2, BarChart3, StickyNote,
   Search, Edit2, ChevronLeft, ChevronRight, Menu, LayoutDashboard,
   Languages, Award, Skull, Hash, CalendarDays, ShieldAlert, Crosshair,
-  Download, Upload,
+  Download, Upload, Lock, Unlock,
 } from 'lucide-react';
 import moment from 'moment';
 import 'moment/locale/th';
@@ -337,6 +337,7 @@ export default function Dashboard() {
 
   const [capital, setCapital] = useState<number | ''>(0);
   const [isEditingCapital, setIsEditingCapital] = useState(false);
+  const [isCapitalLocked, setIsCapitalLocked] = useState(true);
   const [capitalInputVal, setCapitalInputVal] = useState('0');
 
   const [trades, setTrades] = useState<Trade[]>([]);
@@ -1114,16 +1115,19 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
               </div>
             )}
 
-            <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs" style={{ borderColor: themeCardBorder, background: themeCard }} title={`${t.capital}`}>
+            <div className="flex items-center gap-1.5 px-2 sm:px-3 py-2 rounded-xl border text-xs transition-colors" style={{ borderColor: isCapitalLocked ? themeCardBorder : 'rgba(245,158,11,0.5)', background: themeCard }} title={`${t.capital}`}>
               <span className={`hidden sm:inline ${textMuted}`}>{t.capital}</span>
               <input
                 type="text"
+                readOnly={isCapitalLocked}
                 value={isEditingCapital ? capitalInputVal : Number(capital || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 onFocus={() => {
+                  if (isCapitalLocked) return;
                   setIsEditingCapital(true);
                   setCapitalInputVal(capital === '' ? '' : capital.toString());
                 }}
                 onChange={(e) => {
+                  if (isCapitalLocked) return;
                   setCapitalInputVal(e.target.value);
                   const raw = e.target.value.replace(/,/g, '');
                   if (raw === '' || !isNaN(Number(raw))) {
@@ -1133,10 +1137,18 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
                 onBlur={() => {
                   setIsEditingCapital(false);
                   if (capital === '') setCapital(0);
+                  setIsCapitalLocked(true); // Auto-lock on blur
                 }}
-                className="w-16 sm:w-20 bg-transparent font-mono font-bold text-right focus:outline-none rounded"
-                style={{ color: themeText }}
+                className={`w-14 sm:w-20 bg-transparent font-mono font-bold text-right focus:outline-none rounded transition-all ${isCapitalLocked ? 'cursor-default' : 'ring-1 ring-amber-500/50 bg-amber-500/10'}`}
+                style={{ color: isCapitalLocked ? themeText : '#F59E0B' }}
               />
+              <button
+                onClick={() => setIsCapitalLocked(!isCapitalLocked)}
+                className={`p-0.5 rounded transition ${isCapitalLocked ? textMuted + ' hover:text-white' : 'text-amber-500'}`}
+                title={isCapitalLocked ? 'Unlock to edit' : 'Lock'}
+              >
+                {isCapitalLocked ? <Lock size={12} /> : <Unlock size={12} />}
+              </button>
             </div>
 
             <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs" style={{ borderColor: themeCardBorder, background: themeCard }} title={`${t.balance}: ${fmt(currentBalance)}`}>
