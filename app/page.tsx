@@ -226,8 +226,8 @@ function computeStats(list: Trade[]) {
 }
 
 function WinRateGauge({ value, wins, losses, isDark, t }: { value: number; wins: number; losses: number; isDark: boolean; t: any }) {
-  const size = 120;
-  const strokeWidth = 14;
+  const size = 96; // Reduced from 120
+  const strokeWidth = 10; // Reduced from 14
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
   const clamped = Math.min(Math.max(value, 0), 100);
@@ -236,8 +236,8 @@ function WinRateGauge({ value, wins, losses, isDark, t }: { value: number; wins:
   const color = clamped >= 60 ? COLORS.gain : clamped >= 40 ? COLORS.neutral : COLORS.loss;
   
   return (
-    <div className="flex flex-col items-center justify-center w-full gap-3 mt-1">
-      <div className="relative" style={{ width: size, height: size }}>
+    <div className="flex flex-col items-center justify-center w-full h-full gap-2.5">
+      <div className="relative mt-2" style={{ width: size, height: size }}>
         <svg className="transform -rotate-90 w-full h-full">
           <circle cx={size / 2} cy={size / 2} r={radius} stroke={isDark ? '#1E293B' : '#E2E8F0'} strokeWidth={strokeWidth} fill="none" />
           <circle
@@ -245,24 +245,23 @@ function WinRateGauge({ value, wins, losses, isDark, t }: { value: number; wins:
             stroke={color} strokeWidth={strokeWidth} fill="none" strokeLinecap="round"
             strokeDasharray={circumference} strokeDashoffset={offset}
             className="transition-all duration-1000 ease-out"
-            style={{ filter: `drop-shadow(0 0 8px ${color}60)` }}
+            style={{ filter: `drop-shadow(0 0 6px ${color}60)` }}
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-2xl font-black font-mono tracking-tighter" style={{ color: isDark ? '#F8FAFC' : '#0F172A' }}>
-            {value.toFixed(1)}%
+          <span className="text-xl md:text-2xl font-black font-mono tracking-tighter" style={{ color: isDark ? '#F8FAFC' : '#0F172A' }}>
+            {value.toFixed(0)}%
           </span>
         </div>
       </div>
-      <div className="flex items-center gap-3 text-[11px] font-mono font-bold mt-1">
-        <span className="flex items-center gap-1.5 px-3 py-1 rounded-lg transition-colors hover:brightness-110" style={{ background: 'rgba(16, 185, 129, 0.15)', color: COLORS.gain }}>
+      <div className="flex items-center gap-2 text-[10px] md:text-[11px] font-mono font-bold mt-auto mb-1">
+        <span className="flex items-center gap-1 px-2 py-1 rounded-lg transition-colors hover:brightness-110" style={{ background: 'rgba(16, 185, 129, 0.15)', color: COLORS.gain }}>
           {wins} {t.win}
         </span>
-        <span className="flex items-center gap-1.5 px-3 py-1 rounded-lg transition-colors hover:brightness-110" style={{ background: 'rgba(244, 63, 94, 0.15)', color: COLORS.loss }}>
+        <span className="flex items-center gap-1 px-2 py-1 rounded-lg transition-colors hover:brightness-110" style={{ background: 'rgba(244, 63, 94, 0.15)', color: COLORS.loss }}>
           {losses} {t.loss}
         </span>
       </div>
-    </div>
   );
 }
 
