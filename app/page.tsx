@@ -330,9 +330,17 @@ export default function Dashboard() {
     return () => subscription.unsubscribe();
   }, [supabase.auth]);
 
-    const handleLogout = async () => {
+  const handleLogout = async () => {
     await supabase.auth.signOut();
     setUser(null);
+    setTrades([]);
+    setCapital(0);
+    setCapitalInputVal('0');
+    setTargetProfit(0);
+    setTargetInputVal('0');
+    localStorage.removeItem('trading_data_v1');
+    localStorage.removeItem('trading_capital_v1');
+    localStorage.removeItem('trading_target_profit');
   };
 
   const [capital, setCapital] = useState<number | ''>(0);
