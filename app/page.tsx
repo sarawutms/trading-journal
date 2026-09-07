@@ -1739,16 +1739,22 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
               {dayDetailsEvents.length === 0 ? (
                 <p className={`text-center py-6 ${textMuted}`}>{t.dayDetailsEmpty}</p>
               ) : dayDetailsEvents.map((event) => {
-                const isWithdrawal = event.tradeType === '';
+                const isWithdrawal = event.tradeType === '' && event.withdrawal > 0;
+                const isDeposit = event.tradeType === '' && event.withdrawal < 0;
+                const isFund = isWithdrawal || isDeposit;
                 return (
-                <div key={event.id} className="p-4 rounded-xl border-l-4" style={{ background: themeCardElevated, borderLeftColor: event.amount > 0 && !isWithdrawal ? COLORS.gain : event.amount < 0 && !isWithdrawal ? COLORS.loss : COLORS.neutral }}>
+                <div key={event.id} className="p-4 rounded-xl border-l-4" style={{ background: themeCardElevated, borderLeftColor: event.amount > 0 && !isFund ? COLORS.gain : event.amount < 0 && !isFund ? COLORS.loss : isDeposit ? '#3B82F6' : COLORS.neutral }}>
                   <div className="flex justify-between items-start gap-3">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-lg">{isWithdrawal ? t.withdrawalStat : (event.pair || '-')}</h3>
+                        <h3 className="font-bold text-lg">{isFund ? (isDeposit ? (lang === 'th' ? 'ฝากเงิน' : 'Deposit') : t.withdrawalStat) : (event.pair || '-')}</h3>
                         {isWithdrawal ? (
                           <span className="px-1.5 py-0.5 rounded text-[10px] font-bold font-mono bg-amber-500/20 text-amber-400">
                             WITHDRAWAL
+                          </span>
+                        ) : isDeposit ? (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold font-mono bg-blue-500/20 text-blue-400">
+                            DEPOSIT
                           </span>
                         ) : (
                           <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold font-mono ${event.tradeType === 'BUY' ? 'bg-sky-500/20 text-sky-400' : 'bg-rose-500/20 text-rose-400'}`}>
@@ -1757,7 +1763,7 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
                         )}
                       </div>
                       
-                      {!isWithdrawal && (
+                      {!isFund && (
                         <>
                           <p className={`text-xs font-mono mt-0.5 ${textMuted}`}>Lot: {event.lot || '0.01'} | Orders: {event.orders || '1'}</p>
                           {(event.strategy || event.timeframe || event.rr) && (
@@ -1786,15 +1792,15 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
                           <StickyNote size={13} className="mt-0.5 shrink-0" /> <span>{event.notes}</span>
                         </p>
                       )}
-                      {event.withdrawal > 0 && !isWithdrawal && (
+                      {event.withdrawal > 0 && !isFund && (
                         <p className="text-sm text-amber-400 mt-1 flex items-center gap-1">
                           <ArrowDownToLine size={14} /> {t.withdrawn}: {fmt(event.withdrawal)}
                         </p>
                       )}
                     </div>
                     <div className="flex flex-col items-end gap-2 shrink-0">
-                      {isWithdrawal ? (
-                        <span className="text-xl font-extrabold font-mono text-amber-400">{fmt(event.withdrawal)}</span>
+                      {isFund ? (
+                        <span className={`text-xl font-extrabold font-mono ${isDeposit ? 'text-blue-400' : 'text-amber-400'}`}>{isDeposit ? '+' : ''}{fmt(Math.abs(event.withdrawal))}</span>
                       ) : (
                         <span className="text-xl font-extrabold font-mono" style={{ color: event.amount > 0 ? COLORS.gain : event.amount < 0 ? COLORS.loss : COLORS.neutral }}>{fmt(event.amount)}</span>
                       )}
