@@ -371,6 +371,7 @@ export default function Dashboard() {
 
   const [targetProfit, setTargetProfit] = useState<number | ''>(0);
   const [isEditingTarget, setIsEditingTarget] = useState(false);
+  const [isTargetLocked, setIsTargetLocked] = useState(true);
 
     const [targetInputVal, setTargetInputVal] = useState('0');
 
@@ -1260,16 +1261,28 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
                 
                 <div className={cardClassName} style={cardStyle}>
                   <div className="space-y-2 mb-4">
-                    <div className="flex justify-between items-center">
-                      <span className={`text-xs font-medium ${textMuted}`}>{t.targetProfitLabel}</span>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className={`text-xs font-medium flex items-center gap-1.5 ${textMuted}`}>
+                        {t.targetProfitLabel}
+                        <button
+                          onClick={() => setIsTargetLocked(!isTargetLocked)}
+                          className={`p-0.5 rounded transition ${isTargetLocked ? textMuted + ' hover:text-white' : 'text-amber-500'}`}
+                          title={isTargetLocked ? 'Unlock to edit' : 'Lock'}
+                        >
+                          {isTargetLocked ? <Lock size={12} /> : <Unlock size={12} />}
+                        </button>
+                      </span>
                       <input
                         type="text"
+                        readOnly={isTargetLocked}
                         value={isEditingTarget ? targetInputVal : Number(targetProfit || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         onFocus={() => {
+                          if (isTargetLocked) return;
                           setIsEditingTarget(true);
                           setTargetInputVal(targetProfit === '' ? '' : targetProfit.toString());
                         }}
                         onChange={(e) => {
+                          if (isTargetLocked) return;
                           setTargetInputVal(e.target.value);
                           const raw = e.target.value.replace(/,/g, '');
                           if (raw === '' || !isNaN(Number(raw))) {
@@ -1279,9 +1292,10 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
                         onBlur={() => {
                           setIsEditingTarget(false);
                           if (targetProfit === '') setTargetProfit(0);
+                          setIsTargetLocked(true); // Auto-lock on blur
                         }}
-                        className="w-40 text-2xl font-extrabold font-mono bg-transparent text-right focus:outline-none rounded px-1"
-                        style={{ color: COLORS.accent }}
+                        className={`w-32 sm:w-40 text-xl md:text-2xl font-extrabold font-mono bg-transparent text-right focus:outline-none rounded px-1 transition-all ${isTargetLocked ? 'cursor-default' : 'ring-1 ring-amber-500/50 bg-amber-500/10'}`}
+                        style={{ color: isTargetLocked ? COLORS.accent : '#F59E0B' }}
                       />
                     </div>
                     <div className="flex justify-between items-center text-xs font-mono">
