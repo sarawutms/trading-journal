@@ -1573,17 +1573,23 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
                     </thead>
                     <tbody>
                       {paginatedTrades.map((tr) => {
-                          const isWithdrawal = tr.tradeType === '';
+                          const isWithdrawal = tr.tradeType === '' && tr.withdrawal > 0;
+                          const isDeposit = tr.tradeType === '' && tr.withdrawal < 0;
+                          const isFund = isWithdrawal || isDeposit;
                           return (
                           <tr key={tr.id} className="border-b last:border-0 transition" style={{ borderColor: isDarkMode ? '#1A1A24' : '#F1F5F9' }}>
                             <td className="py-3 pr-3 whitespace-nowrap font-mono text-xs">
                               {moment(tr.start).format('DD/MM/')}{lang === 'th' ? tr.start.getFullYear() + 543 : tr.start.getFullYear()}
                             </td>
-                            <td className="py-3 pr-3 font-semibold">{isWithdrawal ? '-' : (tr.pair || '-')}</td>
+                            <td className="py-3 pr-3 font-semibold">{isFund ? '-' : (tr.pair || '-')}</td>
                             <td className="py-3 pr-3">
                               {isWithdrawal ? (
                                 <span className="px-2 py-0.5 rounded text-xs font-bold font-mono bg-amber-500/20 text-amber-400">
                                   WITHDRAWAL
+                                </span>
+                              ) : isDeposit ? (
+                                <span className="px-2 py-0.5 rounded text-xs font-bold font-mono bg-blue-500/20 text-blue-400">
+                                  DEPOSIT
                                 </span>
                               ) : (
                                 <span className={`px-2 py-0.5 rounded text-xs font-bold font-mono ${tr.tradeType === 'BUY' ? 'bg-sky-500/20 text-sky-400' : 'bg-rose-500/20 text-rose-400'}`}>
@@ -1592,10 +1598,10 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
                               )}
                             </td>
                             <td className="py-3 pr-3 font-mono text-xs">
-                              {isWithdrawal ? '-' : <>{tr.lot || '0.01'} <span className="text-slate-500">/</span> {tr.orders || '1'}</>}
+                              {isFund ? '-' : <>{tr.lot || '0.01'} <span className="text-slate-500">/</span> {tr.orders || '1'}</>}
                             </td>
                             <td className="py-3 pr-3 font-mono text-xs">
-                              {isWithdrawal ? '-' : <>
+                              {isFund ? '-' : <>
                                 <span className={tr.tpStatus === 'HIT' ? 'text-green-400 font-bold' : 'text-slate-500'}>TP</span> 
                                 <span className="text-slate-500 px-1">/</span> 
                                 <span className={tr.slStatus === 'HIT' ? 'text-rose-400 font-bold' : 'text-slate-500'}>SL</span>
@@ -1609,9 +1615,11 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
                               {tr.rr && <span className="font-mono text-[10px] text-amber-300 mr-1.5 border border-amber-500/30 px-1 rounded bg-amber-500/10">1:{tr.rr}</span>}
                               {tr.notes || ( (!tr.strategy && !tr.timeframe && !tr.emotion && !tr.imageUrl && !tr.rr) ? '-' : '')}
                             </td>
-                            <td className="py-3 pr-3 text-right font-mono text-amber-400">{tr.withdrawal > 0 ? fmt(tr.withdrawal) : '-'}</td>
-                            <td className="py-3 pr-3 text-right font-mono font-bold" style={{ color: tr.amount >= 0 && !isWithdrawal ? COLORS.gain : COLORS.loss }}>
-                              {isWithdrawal ? '-' : fmt(tr.amount)}
+                            <td className="py-3 pr-3 text-right font-mono text-amber-400">
+                              {tr.withdrawal > 0 ? fmt(tr.withdrawal) : isDeposit ? <span className="text-blue-400">+{fmt(Math.abs(tr.withdrawal))}</span> : '-'}
+                            </td>
+                            <td className="py-3 pr-3 text-right font-mono font-bold" style={{ color: tr.amount >= 0 && !isFund ? COLORS.gain : COLORS.loss }}>
+                              {isFund ? '-' : fmt(tr.amount)}
                             </td>
                             <td className="py-3 pl-3">
                               <div className="flex items-center justify-center gap-1">
