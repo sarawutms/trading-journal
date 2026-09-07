@@ -275,7 +275,7 @@ function AvgWinLossCombinedBar({ avgWin, avgLoss, capital, totalDeposit, isDark,
   const rrRatio = avgLoss > 0 ? (avgWin / avgLoss).toFixed(2) : (avgWin > 0 ? '∞' : '0.00');
 
   return (
-    <div className="flex flex-col justify-center items-center w-full h-full pb-5 pt-1">
+    <div className="flex flex-col justify-center items-center w-full h-full pb-2">
       <div className="flex w-full gap-3">
         <div className="flex-1 flex flex-col items-center justify-center py-2.5 rounded-xl border" style={{ background: isDark ? 'rgba(16, 185, 129, 0.05)' : 'rgba(16, 185, 129, 0.1)', borderColor: isDark ? 'rgba(16, 185, 129, 0.1)' : 'rgba(16, 185, 129, 0.2)' }}>
           <span className="text-xl md:text-2xl font-black font-mono tracking-tighter" style={{ color: COLORS.gain }}>+{avgWinPct.toFixed(2)}%</span>
@@ -1324,9 +1324,11 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
                   </div>
                 </div>
 
-                <div className={cardClassName} style={cardStyle}>
+                <div className={`${cardClassName} flex flex-col`} style={cardStyle}>
                   <p className={`text-xs font-medium ${textMuted} mb-1`}>{t.avgWinLoss}</p>
-                  <AvgWinLossCombinedBar avgWin={periodStats.avgWin} avgLoss={periodStats.avgLoss} capital={Number(capital || 0)} totalDeposit={allStats.totalDeposit} isDark={isDarkMode} t={t} />
+                  <div className="flex-1 w-full">
+                    <AvgWinLossCombinedBar avgWin={periodStats.avgWin} avgLoss={periodStats.avgLoss} capital={Number(capital || 0)} totalDeposit={allStats.totalDeposit} isDark={isDarkMode} t={t} />
+                  </div>
                 </div>
               </div>
 
