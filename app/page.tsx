@@ -266,31 +266,40 @@ function WinRateGauge({ value, wins, losses, isDark, t }: { value: number; wins:
   );
 }
 
-function AvgWinLossCombinedBar({ avgWin, avgLoss, capital, totalDeposit, isDark }: { avgWin: number; avgLoss: number; capital: number; totalDeposit?: number; isDark: boolean }) {
+function AvgWinLossCombinedBar({ avgWin, avgLoss, capital, totalDeposit, isDark, t }: { avgWin: number; avgLoss: number; capital: number; totalDeposit?: number; isDark: boolean; t: any }) {
   const total = avgWin + avgLoss || 1;
   const winPct = (avgWin / total) * 100;
   
   const safeCap = (capital || 0) > 0 ? capital : ((totalDeposit || 0) > 0 ? totalDeposit! : 1);
   const avgWinPct = (avgWin / safeCap) * 100;
   const avgLossPct = (avgLoss / safeCap) * 100;
+  const rrRatio = avgLoss > 0 ? (avgWin / avgLoss).toFixed(2) : (avgWin > 0 ? '∞' : '0.00');
 
   return (
-    <div className="flex flex-col justify-between items-center w-full h-full min-h-[125px] py-1">
-      <div className="flex-1 flex items-center justify-center">
-        <div className="flex items-center gap-1 text-xl md:text-2xl font-extrabold font-mono tabular-nums tracking-tight">
-          <span style={{ color: COLORS.gain }}>+{avgWinPct.toFixed(2)}%</span>
-          <span className="text-slate-500 font-light px-1">/</span>
-          <span style={{ color: COLORS.loss }}>-{avgLossPct.toFixed(2)}%</span>
+    <div className="flex flex-col justify-between items-center w-full h-full py-1">
+      <div className="flex w-full gap-2 mb-3 mt-1">
+        <div className="flex-1 flex flex-col items-center py-2.5 rounded-xl border" style={{ background: isDark ? 'rgba(16, 185, 129, 0.05)' : 'rgba(16, 185, 129, 0.1)', borderColor: isDark ? 'rgba(16, 185, 129, 0.1)' : 'rgba(16, 185, 129, 0.2)' }}>
+          <span className="text-xl md:text-2xl font-black font-mono tracking-tighter" style={{ color: COLORS.gain }}>+{avgWinPct.toFixed(2)}%</span>
+          <span className="text-[11px] font-mono font-bold opacity-70 mt-0.5" style={{ color: COLORS.gain }}>{fmt(avgWin)}</span>
+        </div>
+        <div className="flex-1 flex flex-col items-center py-2.5 rounded-xl border" style={{ background: isDark ? 'rgba(244, 63, 94, 0.05)' : 'rgba(244, 63, 94, 0.1)', borderColor: isDark ? 'rgba(244, 63, 94, 0.1)' : 'rgba(244, 63, 94, 0.2)' }}>
+          <span className="text-xl md:text-2xl font-black font-mono tracking-tighter" style={{ color: COLORS.loss }}>-{avgLossPct.toFixed(2)}%</span>
+          <span className="text-[11px] font-mono font-bold opacity-70 mt-0.5" style={{ color: COLORS.loss }}>-{fmt(avgLoss)}</span>
         </div>
       </div>
-      <div className="w-full space-y-1.5 mb-1 mt-auto">
-        <div className="h-2 rounded-full overflow-hidden flex w-full" style={{ background: isDark ? '#22222E' : '#E2E8F0' }}>
-          <div style={{ width: `${winPct}%`, background: COLORS.gain }} />
-          <div style={{ width: `${100 - winPct}%`, background: COLORS.loss }} />
+      
+      <div className="w-full mt-auto relative pt-1">
+        <div className="flex justify-between text-[9px] font-bold mb-1 opacity-50 uppercase tracking-wider px-1">
+          <span>{t?.win || 'WIN'}</span>
+          <span>{t?.loss || 'LOSS'}</span>
         </div>
-        <div className="flex justify-between items-center text-xs font-mono w-full px-0.5">
-          <span className="font-bold" style={{ color: COLORS.gain }}>{fmt(avgWin)}</span>
-          <span className="font-bold" style={{ color: COLORS.loss }}>-{fmt(avgLoss)}</span>
+        <div className="h-3 rounded-full overflow-hidden flex w-full relative" style={{ background: isDark ? '#1E293B' : '#E2E8F0', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.2)' }}>
+          <div className="h-full transition-all duration-1000" style={{ width: `${winPct}%`, background: COLORS.gain, filter: `drop-shadow(0 0 6px ${COLORS.gain})` }} />
+          <div className="h-full transition-all duration-1000" style={{ width: `${100 - winPct}%`, background: COLORS.loss, filter: `drop-shadow(0 0 6px ${COLORS.loss})` }} />
+        </div>
+        
+        <div className="absolute left-1/2 -bottom-2 -translate-x-1/2 text-white text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full border shadow-lg whitespace-nowrap" style={{ background: isDark ? '#0F172A' : '#1E293B', borderColor: isDark ? '#334155' : '#475569' }}>
+          RR 1 : {rrRatio}
         </div>
       </div>
     </div>
@@ -1305,7 +1314,7 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
 
                 <div className={cardClassName} style={cardStyle}>
                   <p className={`text-xs font-medium ${textMuted} mb-1`}>{t.avgWinLoss}</p>
-                  <AvgWinLossCombinedBar avgWin={periodStats.avgWin} avgLoss={periodStats.avgLoss} capital={Number(capital || 0)} totalDeposit={allStats.totalDeposit} isDark={isDarkMode} />
+                  <AvgWinLossCombinedBar avgWin={periodStats.avgWin} avgLoss={periodStats.avgLoss} capital={Number(capital || 0)} totalDeposit={allStats.totalDeposit} isDark={isDarkMode} t={t} />
                 </div>
               </div>
 
