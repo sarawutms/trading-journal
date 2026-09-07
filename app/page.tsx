@@ -225,41 +225,41 @@ function computeStats(list: Trade[]) {
   };
 }
 
-function polarToXY(cx: number, cy: number, r: number, angleDeg: number) {
-  const rad = (angleDeg * Math.PI) / 180;
-  return { x: cx + r * Math.cos(rad), y: cy - r * Math.sin(rad) }; 
-}
-
 function WinRateGauge({ value, wins, losses, isDark, t }: { value: number; wins: number; losses: number; isDark: boolean; t: any }) {
-  const cx = 100, cy = 90, r = 80;
-  const strokeW = 14;
-  const start = polarToXY(cx, cy, r, 180);
-  const end = polarToXY(cx, cy, r, 0);
+  const size = 120;
+  const strokeWidth = 14;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = radius * 2 * Math.PI;
   const clamped = Math.min(Math.max(value, 0), 100);
-  const angle = 180 - (clamped / 100) * 180;
-  // tip sits just inside the arc so the needle clearly points at the value
-  const tip = polarToXY(cx, cy, r - strokeW / 2 - 4, angle);
+  const offset = circumference - (clamped / 100) * circumference;
+  
+  const color = clamped >= 60 ? COLORS.gain : clamped >= 40 ? COLORS.neutral : COLORS.loss;
+  
   return (
-    <div className="flex flex-col items-center justify-center gap-2 w-full">
-      <svg viewBox="0 0 200 100" className="w-full max-w-[240px]">
-        <defs>
-          <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor={COLORS.loss} />
-            <stop offset="50%" stopColor={COLORS.neutral} />
-            <stop offset="100%" stopColor={COLORS.gain} />
-          </linearGradient>
-        </defs>
-        <path d={`M ${start.x} ${start.y} A ${r} ${r} 0 0 1 ${end.x} ${end.y}`} stroke="url(#gaugeGrad)" strokeWidth={strokeW} fill="none" strokeLinecap="round" />
-        <line x1={cx} y1={cy} x2={tip.x} y2={tip.y} stroke={isDark ? '#E5E7EB' : '#1E293B'} strokeWidth="3.5" strokeLinecap="round" />
-        <circle cx={cx} cy={cy} r="6" fill={isDark ? '#E5E7EB' : '#1E293B'} />
-      </svg>
-      <p className="text-3xl font-extrabold font-mono tabular-nums leading-none">{value.toFixed(1)}%</p>
-      <div className="flex items-center gap-4 text-[11px] font-mono">
-        <span className="flex items-center gap-1.5" style={{ color: COLORS.gain }}>
-          <span className="w-2 h-2 rounded-full shrink-0" style={{ background: COLORS.gain }} />{wins} {t.win}
+    <div className="flex flex-col items-center justify-center w-full gap-3 mt-1">
+      <div className="relative" style={{ width: size, height: size }}>
+        <svg className="transform -rotate-90 w-full h-full">
+          <circle cx={size / 2} cy={size / 2} r={radius} stroke={isDark ? '#1E293B' : '#E2E8F0'} strokeWidth={strokeWidth} fill="none" />
+          <circle
+            cx={size / 2} cy={size / 2} r={radius}
+            stroke={color} strokeWidth={strokeWidth} fill="none" strokeLinecap="round"
+            strokeDasharray={circumference} strokeDashoffset={offset}
+            className="transition-all duration-1000 ease-out"
+            style={{ filter: `drop-shadow(0 0 8px ${color}60)` }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-2xl font-black font-mono tracking-tighter" style={{ color: isDark ? '#F8FAFC' : '#0F172A' }}>
+            {value.toFixed(1)}%
+          </span>
+        </div>
+      </div>
+      <div className="flex items-center gap-3 text-[11px] font-mono font-bold mt-1">
+        <span className="flex items-center gap-1.5 px-3 py-1 rounded-lg transition-colors hover:brightness-110" style={{ background: 'rgba(16, 185, 129, 0.15)', color: COLORS.gain }}>
+          {wins} {t.win}
         </span>
-        <span className="flex items-center gap-1.5" style={{ color: COLORS.loss }}>
-          <span className="w-2 h-2 rounded-full shrink-0" style={{ background: COLORS.loss }} />{losses} {t.loss}
+        <span className="flex items-center gap-1.5 px-3 py-1 rounded-lg transition-colors hover:brightness-110" style={{ background: 'rgba(244, 63, 94, 0.15)', color: COLORS.loss }}>
+          {losses} {t.loss}
         </span>
       </div>
     </div>
