@@ -226,8 +226,8 @@ function computeStats(list: Trade[]) {
 }
 
 function WinRateGauge({ value, wins, losses, isDark, t }: { value: number; wins: number; losses: number; isDark: boolean; t: any }) {
-  const size = 96; // Reduced from 120
-  const strokeWidth = 10; // Reduced from 14
+  const size = 116; // Increased to look fuller
+  const strokeWidth = 12; // Adjusted for new size
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
   const clamped = Math.min(Math.max(value, 0), 100);
@@ -249,7 +249,7 @@ function WinRateGauge({ value, wins, losses, isDark, t }: { value: number; wins:
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-xl md:text-2xl font-black font-mono tracking-tighter" style={{ color: isDark ? '#F8FAFC' : '#0F172A' }}>
+          <span className="text-2xl md:text-[28px] font-black font-mono tracking-tighter" style={{ color: isDark ? '#F8FAFC' : '#0F172A' }}>
             {value.toFixed(0)}%
           </span>
         </div>
