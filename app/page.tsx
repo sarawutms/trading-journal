@@ -249,16 +249,23 @@ function WinRateGauge({ value, wins, losses, isDark, t }: { value: number; wins:
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-2xl md:text-[28px] font-black font-mono tracking-tighter" style={{ color: isDark ? '#F8FAFC' : '#0F172A' }}>
-            {value.toFixed(0)}%
-          </span>
+          <div className="flex items-baseline gap-0.5" style={{ color: isDark ? '#F8FAFC' : '#0F172A' }}>
+            <span className="text-3xl md:text-[32px] font-black font-mono tracking-tighter">
+              {value.toFixed(0)}
+            </span>
+            <span className="text-sm md:text-base font-bold font-mono opacity-50">
+              %
+            </span>
+          </div>
         </div>
       </div>
       <div className="flex items-center gap-2 text-[10px] md:text-[11px] font-mono font-bold mt-auto mb-1">
-        <span className="flex items-center gap-1 px-2 py-1 rounded-lg transition-colors hover:brightness-110" style={{ background: 'rgba(16, 185, 129, 0.15)', color: COLORS.gain }}>
+        <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg transition-colors hover:brightness-110" style={{ background: isDark ? 'rgba(16, 185, 129, 0.1)' : 'rgba(16, 185, 129, 0.15)', color: COLORS.gain }}>
+          <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: COLORS.gain }}></div>
           {wins} {t.win}
         </span>
-        <span className="flex items-center gap-1 px-2 py-1 rounded-lg transition-colors hover:brightness-110" style={{ background: 'rgba(244, 63, 94, 0.15)', color: COLORS.loss }}>
+        <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg transition-colors hover:brightness-110" style={{ background: isDark ? 'rgba(244, 63, 94, 0.1)' : 'rgba(244, 63, 94, 0.15)', color: COLORS.loss }}>
+          <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: COLORS.loss }}></div>
           {losses} {t.loss}
         </span>
       </div>
