@@ -350,6 +350,7 @@ export default function Dashboard() {
     localStorage.removeItem('trading_data_v1');
     localStorage.removeItem('trading_capital_v1');
     localStorage.removeItem('trading_target_profit');
+    setIsCloudLoaded(false);
   };
 
   const [capital, setCapital] = useState<number | ''>(0);
@@ -360,6 +361,7 @@ export default function Dashboard() {
 
   const [trades, setTrades] = useState<Trade[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isCloudLoaded, setIsCloudLoaded] = useState(false);
 
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [lang, setLang] = useState<Lang>('th');
@@ -422,6 +424,7 @@ export default function Dashboard() {
         }));
         setTrades(mappedTrades);
       }
+      setIsCloudLoaded(true);
     };
     
     fetchCloudData();
@@ -501,12 +504,12 @@ export default function Dashboard() {
       localStorage.setItem('trading_target_profit', targetProfit.toString());
       
       // Sync settings to cloud
-      if (user) {
+      if (user && isCloudLoaded) {
         supabase.from('user_settings').upsert({
           user_id: user.id,
           capital: Number(capital) || 0,
           target_profit: Number(targetProfit) || 0
-        }).then(({ error }) => {
+        }, { onConflict: 'user_id' }).then(({ error }) => {
           if (error) console.error('Cloud settings save failed:', error);
         });
       }
@@ -515,7 +518,7 @@ export default function Dashboard() {
       console.error('Failed to save data', e);
       alert(t.storageSaveFailed);
     }
-  }, [trades, capital, lang, isDarkMode, targetProfit, isLoaded, user, supabase]);
+  }, [trades, capital, lang, isDarkMode, targetProfit, isLoaded, user, supabase, isCloudLoaded]);
 
   useEffect(() => {
     moment.locale(lang === 'th' ? 'th' : 'en');
