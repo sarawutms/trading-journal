@@ -356,6 +356,7 @@ export default function Dashboard() {
   const [isEditingCapital, setIsEditingCapital] = useState(false);
   const [isCapitalLocked, setIsCapitalLocked] = useState(true);
   const [capitalInputVal, setCapitalInputVal] = useState('0');
+  const capitalInputRef = useRef<HTMLInputElement>(null);
 
   const [trades, setTrades] = useState<Trade[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -374,6 +375,7 @@ export default function Dashboard() {
   const [isTargetLocked, setIsTargetLocked] = useState(true);
 
     const [targetInputVal, setTargetInputVal] = useState('0');
+  const targetInputRef = useRef<HTMLInputElement>(null);
 
   const [showModal, setShowModal] = useState(false);
   const [calendarDate, setCalendarDate] = useState<Date>(new Date());
@@ -1137,7 +1139,7 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
               <span className={`hidden sm:inline ${textMuted}`}>{t.capital}</span>
               <input
                 type="text"
-                readOnly={isCapitalLocked}
+                ref={capitalInputRef} readOnly={isCapitalLocked} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
                 value={isEditingCapital ? capitalInputVal : Number(capital || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 onFocus={() => {
                   if (isCapitalLocked) return;
@@ -1161,7 +1163,7 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
                 style={{ color: isCapitalLocked ? themeText : '#F59E0B' }}
               />
               <button
-                onClick={() => setIsCapitalLocked(!isCapitalLocked)}
+                onClick={() => { setIsCapitalLocked(!isCapitalLocked); if (isCapitalLocked) setTimeout(() => capitalInputRef.current?.focus(), 0); }}
                 className={`p-0.5 rounded transition ${isCapitalLocked ? textMuted + ' hover:text-white' : 'text-amber-500'}`}
                 title={isCapitalLocked ? 'Unlock to edit' : 'Lock'}
               >
@@ -1265,7 +1267,7 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
                       <span className={`text-xs font-medium flex items-center gap-1.5 ${textMuted}`}>
                         {t.targetProfitLabel}
                         <button
-                          onClick={() => setIsTargetLocked(!isTargetLocked)}
+                          onClick={() => { setIsTargetLocked(!isTargetLocked); if (isTargetLocked) setTimeout(() => targetInputRef.current?.focus(), 0); }}
                           className={`p-0.5 rounded transition ${isTargetLocked ? textMuted + ' hover:text-white' : 'text-amber-500'}`}
                           title={isTargetLocked ? 'Unlock to edit' : 'Lock'}
                         >
@@ -1274,7 +1276,7 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
                       </span>
                       <input
                         type="text"
-                        readOnly={isTargetLocked}
+                        ref={targetInputRef} readOnly={isTargetLocked} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
                         value={isEditingTarget ? targetInputVal : Number(targetProfit || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         onFocus={() => {
                           if (isTargetLocked) return;
@@ -2109,3 +2111,4 @@ const matchesType = !filterType || (filterType === 'WITHDRAWAL' ? tr.tradeType =
     </div>
   );
 }
+
